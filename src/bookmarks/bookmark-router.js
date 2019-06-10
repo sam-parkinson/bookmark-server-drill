@@ -51,10 +51,10 @@ bookmarkRouter
       logger.error(`Bookmark with id ${id} not found.`);
       return res
         .status(404)
-        .send('Bookmark not found');
+        .send('404 not found');
     }
 
-    res.json(list);
+    res.json(bookmark);
   })
   .delete((req, res) => {
     const { id } = req.params;
