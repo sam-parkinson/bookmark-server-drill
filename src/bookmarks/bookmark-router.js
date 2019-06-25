@@ -1,11 +1,21 @@
 const express = require('express');
-const uuid = require('uuid/v4');
+const xss = require('xss');
+const { isWebUri } = require('valid-url')
 const logger = require('../logger');
 const bookmarks = require('../store');
 const BookmarksService = require('./bookmarks-service');
 
 const bookmarkRouter = express.Router();
 const bodyParser = express.json();
+
+const scrubBookmark = bookmark => ({
+    id: bookmark.id,
+    rating: Number(bookmark.rating), 
+    title: xss(bookmark.title),
+    url: xss(bookmark.url),
+    description: xss(bookmark.description)
+  })
+
 
 bookmarkRouter
   .route('/bookmarks')
@@ -17,34 +27,43 @@ bookmarkRouter
       })
       .catch(next);
   })
-  .post(bodyParser, (req, res) => {
-    const { title, url, description, rating } = req.body;
+  .post(bodyParser, (req, res, next) => {
+    const { title, url, rating, description } = req.body;
+    const newBookmark = { title, url, rating, description }
 
-    if (!title || !url || !description || !rating ) {
-      logger.error(`Incomplete bookmark provided`);
-      return res
-        .status(400)
-        .send('Invalid data');
+    for(const [key, value] of Object.entries(newBookmark)) {
+      if (value == null) {
+        return res.status(400).json({
+          error: { message: `Missing '${key}' in request body` }
+        })
+      }
     }
 
-    const id = uuid();
+    if(!isWebUri(url)) {
+      logger.error(`Invalid url supplied`)
+      return res.status(400).json({
+        error: { message: `Url in request body is invalid` }
+      })
+    }
 
-    const bookmark = {
-      id,
-      title,
-      url,
-      description,
-      rating
-    };
+    if(!Number.isInteger(rating) || rating < 0 || rating > 5) {
+      logger.error(`Invalid number supplied`)
+      return res.status(400).json({
+        error: { message: `Number in request body must be an integer between 0 and 5` }
+      })
+    }
 
-    bookmarks.push(bookmark);
-
-    logger.info(`Bookmark with id ${id} created`);
-
-    res
-      .status(201)
-      .location(`http://localhost:8000/card/${id}`)
-      .json(bookmark);
+    BookmarksService.insertBookmark(
+      req.app.get('db'),
+      newBookmark
+    )
+      .then(bookmark => {
+        res
+          .status(201)
+          .location(`/bookmarks/${bookmark.id}`)
+          .json(scrubBookmark(bookmark))
+      })
+      .catch(next)
   });
 
 bookmarkRouter
