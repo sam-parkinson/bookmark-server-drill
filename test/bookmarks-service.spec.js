@@ -44,6 +44,22 @@ describe(`Bookmarks service object`, function () {
           .expect(200, testMarks)
       });
     });
+
+    context('Given an XSS attack bookmark', () => {
+      const { maliciousBookmark, cleanBookmark } = makeMaliciousBookmark();
+
+      beforeEach('insert malicious bookmark', () => {
+        return db
+          .into('bookmarks')
+          .insert([maliciousBookmark])
+      });
+
+      it(`GET /bookmarks responds with 200 and XSS attack removed`, () => {
+        return supertest(app)
+          .get('/bookmarks')
+          .expect([cleanBookmark])
+      });
+    });
   });
 
   describe('GET /bookmarks/:id', () => {
@@ -52,7 +68,7 @@ describe(`Bookmarks service object`, function () {
         const bkId = 9876;
         return supertest(app)
           .get(`/bookmarks/${bkId}`)
-          .expect(404, { error: {message: '404 not found'} })
+          .expect(404, { error: { message: `Bookmark does not exist` } })
       });
     });
 
@@ -72,6 +88,22 @@ describe(`Bookmarks service object`, function () {
           .get(`/bookmarks/${bkId}`)
           .expect(200, expectedMark);
       });
+    });
+
+    context('Given an XSS attac bookmark', () => {
+      const { maliciousBookmark, cleanBookmark } = makeMaliciousBookmark();
+
+      beforeEach('insert malicious bookmark', () => {
+        return db
+          .into('bookmarks')
+          .insert(maliciousBookmark)
+      });
+
+      it('removes XSS attack content', () => {
+        return supertest(app)
+          .get(`/bookmarks/${maliciousBookmark.id}`)
+          .expect(200, cleanBookmark)
+      })
     });
   });
 
@@ -183,8 +215,29 @@ describe(`Bookmarks service object`, function () {
       });
 
       it(`responds with 204 and removes the bookmark`, () => {
-        
-      })
+        const idToRemove = 2;
+        const expectedMarks = testMarks.filter(mark => mark.id !== idToRemove);
+
+        return supertest(app)
+          .delete(`/bookmarks/${idToRemove}`)
+          .expect(204)
+          .then(res => {
+            supertest(app)
+            .get(`/bookmarks`)
+            .expect(expectedMarks)
+          })
+      });
+    });
+
+    context(`Given no bookmarks`, () => {
+      it(`responds with 404 and an error message`, () => {
+        const bookmarkId = 123456;
+        return supertest(app)
+          .delete(`/bookmarks/${bookmarkId}`)
+          .expect(404, {
+            error: { message: `Bookmark does not exist` }
+          });
+      });
     });
   });
 });
