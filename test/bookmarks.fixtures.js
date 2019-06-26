@@ -12,21 +12,21 @@ function makeBookmarksArray() {
       title: 'Test Title 2',
       url: 'https://www.reddit.com',
       description: 'Test Description 2',
-      rating: 5
+      rating: 1
     },
     {
       id: 3,
       title: 'Test Title 3',
       url: 'https://giantitp.com',
       description: 'Test Description 3',
-      rating: 2
+      rating: 5
     },
     {
       id: 4,
       title: 'Test Title 4',
       url: 'https://ytmnd.com',
       description: 'Test Description 4',
-      rating: 5
+      rating: 3
     }
   ];
 }
