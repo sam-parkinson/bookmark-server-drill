@@ -13,17 +13,18 @@ const scrubBookmark = bookmark => ({
     rating: Number(bookmark.rating), 
     title: xss(bookmark.title),
     url: xss(bookmark.url),
-    description: xss(bookmark.description)
+    description: xss(bookmark.description),
   })
 
 
 bookmarkRouter
   .route('/')
   .get((req, res, next) => {
-    const knexInstance = req.app.get('db');
-    BookmarksService.getAllBookmarks(knexInstance)
+    BookmarksService.getAllBookmarks(
+      req.app.get('db')
+    )
       .then(bookmarks => {
-        res.json(bookmarks.map(scrubBookmark))
+        res.json(bookmarks.map(scrubBookmark));
       })
       .catch(next);
   })
